@@ -26,7 +26,7 @@ This repository is structured as follows:
 
 - lib (CapSan)
 - bug-severity-AFLplusplus (CapFuzz)
-- SeverityScore
+- scripts (SeverityScore)
 
 We developed CapSan based on AddressSanitizer , and CapFuzz based on AFLplusplus.
 

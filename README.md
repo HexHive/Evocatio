@@ -6,11 +6,11 @@ Evocatio is a bug analyzer built on top of AFL++ and AddressSanitizer. It automa
 
 In this repo, we present 5 function module of Evocatio:
 
-- POC Minimization: to get a poc with smaller size like afl-tmin.
-- Critical Bytes Inference: to infer which bytes of poc are critical, so as to mutate them first.
-- CapFuzz: to explore new capabilities of a bug. In this module, each new poc found by CapFuzz represents a new capability.
-- Bug Capability Scaning: to summurize all capabilities found by CapFuzz.
-- Severity Score: to calculate severity score of the bug from bug capabilities.
+- **POC Minimization**: to get a poc with smaller size like afl-tmin.
+- **Critical Bytes Inference**: to infer which bytes of poc are critical, so as to mutate them first.
+- **CapFuzz**: to explore new capabilities of a bug. In this module, each new poc found by CapFuzz represents a new capability.
+- **Bug Capability Scaning**: to summurize all capabilities found by CapFuzz.
+- **Severity Score**: to calculate severity score of the bug from bug capabilities.
 
 You can use these modules either sequentially or seperately.
 
@@ -18,7 +18,9 @@ More details about the project can be found at the [paper](https://hexhive.epfl.
 
 ## Requirement
 
-We recommend cmake 3.22.0 and later version. We also provide `env_init.sh` and `tmin_build.sh`. `env_init.sh` can prepare necessary softwares for you. `tmin_build.sh` can compile your target with our tools.
+We recommend cmake 3.22.0 and later version. We also provide `env_init.sh` and `instrument.sh`.  
+`env_init.sh` can prepare necessary softwares for you.  
+`instrument.sh` can compile your target with our tools.
 
 ## Components
 
@@ -84,12 +86,12 @@ In this section, you can follow the steps to start from a clean container(e.g. U
     }
     ```
 
-4. If needed, revise `tmin_build.sh` before you use it to compile target program:
+4. If needed, revise `instrument.sh` before you use it to compile target program.
 
 5. Compile target program:
 
     ```bash
-    sh <project_path>/tmin_build.sh
+    sh <project_path>/instrument.sh
     ```
 
 6. Evocatio Function Module 1: POC Minimization (with `asan_afl_new.c`)
@@ -116,7 +118,7 @@ In this section, you can follow the steps to start from a clean container(e.g. U
     cd <project_path>/lib/build
     cmake ..
     make
-    sh <project_path>/tmin_build.sh
+    sh <project_path>/instrument.sh
     ```
 
     Start CapFuzz:
@@ -135,7 +137,7 @@ In this section, you can follow the steps to start from a clean container(e.g. U
     cd <project_path>/lib/build
     cmake ..
     make
-    sh <project_path>/tmin_build.sh
+    sh <project_path>/instrument.sh
     ```
 
     Scan capabilities of poc:
@@ -157,7 +159,7 @@ In this section, you can follow the steps to start from a clean container(e.g. U
 
     This will calulate bug severity score from bug capability json file. The severity score consists of reading score and writing score.
 
-**NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program with `tmin_build.sh` too.**
+**NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program with `instrument.sh` too.**
 
 ## Contact
 

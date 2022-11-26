@@ -14,6 +14,8 @@ In this repo, we present 5 function module of Evocatio:
 
 You can use these modules either sequentially or seperately.
 
+We also present CapSan based on AddressSanitizer to detect bug capabilities.
+
 More details about the project can be found at the [paper](https://hexhive.epfl.ch/publications/files/22CCS.pdf). Our presentation about Evocatio can be found at the [slide](https://hexhive.epfl.ch/publications/files/22CCS-presentation.pdf).
 
 ## Requirement
@@ -27,10 +29,10 @@ We recommend cmake 3.22.0 and later version. We also provide `env_init.sh` and `
 This repository is structured as follows:
 
 - lib (CapSan)
-- bug-severity-AFLplusplus (CapFuzz)
-- scripts (SeverityScore)
+- bug-severity-AFLplusplus (POC Minimization, Critical Bytes Inference, CapFuzz)
+- scripts (Bug Capability Scaning, SeverityScore)
 
-We developed CapSan based on AddressSanitizer , and CapFuzz based on AFLplusplus.
+We developed *lib* based on AddressSanitizer , and *bug-severity-AFLplusplus* based on AFLplusplus.
 
 ## Building
 
@@ -51,18 +53,18 @@ We developed CapSan based on AddressSanitizer , and CapFuzz based on AFLplusplus
 - To set CapSan up, please try:
 
     ```bash
-    cp <project_path>/lib/asan/afl/asan_afl_new.c <project_path>/lib/asan/afl/asan_afl.c
-    cd <project_path>/lib/build
+    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
+    cd /<project_path>/lib/build
     cmake ..
     make
     ```
 
-    (Under `<project_path>/lib/asan/afl/`, there are `asan_afl_new.c` and `asan_afl_ori.c`. Please make sure you use the correct one. For more details, check usage example below.)
+    (Under `/<project_path>/lib/asan/afl/`, there are `asan_afl_new.c` and `asan_afl_ori.c`. Please make sure you use the correct one. For more details, check usage example below.)
 
 - To set CapFuzz up, please try:
 
     ```bash
-    cd <project_path>/bug-severity-AFLplusplus/
+    cd /<project_path>/bug-severity-AFLplusplus/
     make source-only NO_SPLICING=1
     ```
 
@@ -91,13 +93,13 @@ In this section, you can follow the steps to start from a clean container(e.g. U
 5. Compile target program:
 
     ```bash
-    sh <project_path>/instrument.sh
+    sh /<project_path>/instrument.sh
     ```
 
 6. Evocatio Function Module 1: POC Minimization (with `asan_afl_new.c`)
 
     ```bash
-    ./<project_path>/bug-severity-AFLplusplus/afl-tmin-lazy -m none -i poc -o poc_tmin -- /path/to/target/program @@
+    ./<project_path>/bug-severity-AFLplusplus/afl-tmin-lazy -m none -i /path/to/original/poc -o /path/to/minimized/poc -- /path/to/target/program @@
     ```
 
     "@@" is a placeholder like in AFL++. If there are any commands surrounding "@@", keep them.
@@ -105,27 +107,28 @@ In this section, you can follow the steps to start from a clean container(e.g. U
 7. Evocatio Function Module 2: Critical Bytes Inference (with `asan_afl_new.c`)
 
     ```bash
-    mkdir seeds
-    AFL_TMIN_EXACT=1 <project_path>/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i poc_tmin -o /tmp/foo -g -c /tmp/constraints.res -k <project_path>/seeds/ -- /path/to/target/program @@
+    mkdir /<project_path>/seeds
+    AFL_TMIN_EXACT=1 /<project_path>/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k /<project_path>/seeds/ -- /path/to/target/program @@
     ```
+
+    The output will be in `/<project_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `/<project_path>/seeds/` as your fuzzer's original seeds.
 
 8. Evocatio Function Module 3: CapFuzz (with `asan_afl_ori.c`)
 
     Recompile CapSan and target program:
 
     ```bash
-    cp <project_path>/lib/asan/afl/asan_afl_ori.c <project_path>/lib/asan/afl/asan_afl.c
-    cd <project_path>/lib/build
+    cp /<project_path>/lib/asan/afl/asan_afl_ori.c /<project_path>/lib/asan/afl/asan_afl.c
+    cd /<project_path>/lib/build
     cmake ..
     make
-    sh <project_path>/instrument.sh
+    sh /<project_path>/instrument.sh
     ```
 
     Start CapFuzz:
 
     ```bash
-    mkdir out_put
-    ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i <project_path>/seeds/ -o <project_path>/out_put/ -k poc_tmin -- /path/to/target/program @@
+    ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
     ```
 
 9. Evocatio Function Module 4: Bug Capability Scaning (with `asan_afl_new.c`)
@@ -133,17 +136,17 @@ In this section, you can follow the steps to start from a clean container(e.g. U
     Recompile CapSan and target program:
 
     ```bash
-    cp <project_path>/lib/asan/afl/asan_afl_new.c <project_path>/lib/asan/afl/asan_afl.c
-    cd <project_path>/lib/build
+    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
+    cd /<project_path>/lib/build
     cmake ..
     make
-    sh <project_path>/instrument.sh
+    sh /<project_path>/instrument.sh
     ```
 
     Scan capabilities of poc:
 
     ```bash
-    python3 gen_raw_data_for_cve.py -i /path/to/new/crashes -o /path/to/bug/capability/json -b /path/to/target/program -a /path/to/commmands/file
+    python3 /<project_path>/scripts/gen_raw_data_for_cve.py -i /path/to/new/crashes -o /path/to/bug/capability/json -b /path/to/target/program -a /path/to/commmands/file
     ```
 
     -i argument receives path to new pocs found by CapFuzz;  
@@ -154,12 +157,14 @@ In this section, you can follow the steps to start from a clean container(e.g. U
 10. Evocatio Function Module 5: Severity Score (with `asan_afl_new.c`)
 
     ```bash
-    python3 calculate_severity_score.py -i /path/to/bug/capability/json
+    python3 /<project_path>/scripts/calculate_severity_score.py -i /path/to/bug/capability/json
     ```
 
     This will calulate bug severity score from bug capability json file. The severity score consists of reading score and writing score.
 
-**NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program with `instrument.sh` too.**
+For detailed example, please refer to README in each subdirectory.
+
+**NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program too.**
 
 ## Contact
 

@@ -166,6 +166,10 @@ For detailed example, please refer to README in each subdirectory.
 
 **NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program too.**
 
+## Development
+
+Evocatio provides users with a flexible framework that allows developers to flexibly adjust CapSan, CapFuzz and scoring system according to their own needs. For everyone who wants to contribute (and send pull requests), please read our [contributing guidelines](https://github.com/HexHive/Evocatio/blob/main/CONTRIBUTING.md) before you submit.
+
 ## Contact
 
 Questions? Concerns? Feel free to ping me via [E-mail](supermolejzy@gmail.com).

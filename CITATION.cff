@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- given-names: "ZhiYuan"
+  family-names: "Jiang"
+- given-names: "Shuitao"
+  family-names: "Gan"
+- given-names: "Lucio"
+  family-names: "Romerio"
+title: "Evocatio"
+version: 1.0.0
+type: software
+date-released: 2022-11-18
+url: "https://github.com/HexHive/Evocatio"
+keywords: 
+- security
+- exploit
+- fuzzing
+- program-analysis
+- sanitizer
+- severity
+- patch-testing
+- bug-capability
+license: Apache-2.0

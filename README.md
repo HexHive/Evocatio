@@ -175,3 +175,27 @@ For recent update and new features implementation, please ping Mao who is pushin
 ## Cite
 
 If you use Evocatio in scientific work, consider citing our [paper](https://doi.org/10.1145/3548606.3560575) presented at ACM CCS.
+
+<details>
+
+<summary>BibTeX</summary>
+
+```bibtex
+@inproceedings{10.1145/3548606.3560575,
+author = {Jiang, Zhiyuan and Gan, Shuitao and Herrera, Adrian and Toffalini, Flavio and Romerio, Lucio and Tang, Chaojing and Egele, Manuel and Zhang, Chao and Payer, Mathias},
+title = {Evocatio: Conjuring Bug Capabilities from a Single PoC},
+year = {2022},
+isbn = {9781450394505},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3548606.3560575},
+doi = {10.1145/3548606.3560575},
+booktitle = {Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security},
+pages = {1599–1613},
+numpages = {15},
+keywords = {bug triaging, fuzzing, bug capability},
+location = {Los Angeles, CA, USA},
+series = {CCS '22}
+}
+```
+</details>

@@ -18,135 +18,89 @@ We also present CapSan based on AddressSanitizer to detect bug capabilities.
 
 More details about the project can be found at the [paper](https://hexhive.epfl.ch/publications/files/22CCS.pdf). Our presentation about Evocatio can be found at the [slide](https://hexhive.epfl.ch/publications/files/22CCS-presentation.pdf).
 
-## Requirement
-
-We recommend cmake 3.22.0 and later version. We also provide `env_init.sh` and `instrument.sh`.  
-`env_init.sh` can prepare necessary softwares for you.  
-`instrument.sh` can compile your target with our tools.
-
 ## Components
 
 This repository is structured as follows:
 
-- lib (CapSan)
-- bug-severity-AFLplusplus (POC Minimization, Critical Bytes Inference, CapFuzz)
+- bug-severity-AFLplusplus (POC Minimization, Critical Bytes Inference, CapFuzz, CapSan)
 - scripts (Bug Capability Scaning, SeverityScore)
 
-We developed *lib* based on AddressSanitizer , and *bug-severity-AFLplusplus* based on AFLplusplus.
+We developed *bug-severity-AFLplusplus* based on [AFLplusplus](https://github.com/AFLplusplus/AFLplusplus). What's more, our *CapSan* was developed by leveraging the convenience of [`__asan_*` public interface](https://github.com/llvm/llvm-project/blob/b5c862e15caf4d8aa34bbc6ee25af8da9a9405a4/compiler-rt/include/sanitizer/asan_interface.h#L263) provided by [AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer).
+
+## Dependencies
+
+### For *scripts*
+
+Need *Python 3.x*. (Just Python's standard library is enough.)
+
+### For *bug-severity-AFLplusplus*
+
+Generally, requirement of *bug-severity-AFLplusplus* is just same as [AFLplusplus](https://github.com/AFLplusplus/AFLplusplus).
+
+However, you should pay more attention to the availability of *asan_interface.h*. AddressSanitizer is implemented by your compiler suite (such as *gcc* and *clang*), [which works by](https://github.com/google/sanitizers/wiki/AddressSanitizerAlgorithm) instrumenting during the compilation phase and linking its run-time library into the final binary. *`__asan_*` public interface* is provided by its run-time library and declared in *asan_interface.h*. So make sure that your compiler suite provides this header.
 
 ## Building
 
-**Note: <project_path> stands for the directory of your project.**
+The two python scripts in `./scripts` is out-of-the-box. Just build *bug-severity-AFLplusplus* like what is needed for *afl++*:
 
-- Starting from a new clean environment(e.g. a container), we recommend update necessary softwares using our bash:
+```bash
+cd ./bug-severity-AFLplusplus
+make source-only NO_SPLICING=1
+```
 
-    ```bash
-    sh env_init.sh
-    ```
+:warning: Warning:
 
-- And then prepare cmake, here is one possible way(in UBUNTU for instance):
+ - Ensure that `NO_SPLICING=1` is always used there.
 
-    ```bash
-    apt-get install cmake
-    ```
+ - Never use `ASAN_BUILD=1`. Otherwise our *bug-severity run-time dependency* may confuse your compiler and linker, as well as AddressSanitizer.
 
-- To set CapSan up, please try:
-
-    ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    ```
-
-    (Under `/<project_path>/lib/asan/afl/`, there are `asan_afl_new.c` and `asan_afl_ori.c`. Please make sure you use the correct one. For more details, check usage example below.)
-
-- To set CapFuzz up, please try:
-
-    ```bash
-    cd /<project_path>/bug-severity-AFLplusplus/
-    make source-only NO_SPLICING=1
-    ```
+ - Since *afl++ 3.0* there is only one compiler *afl-cc* works for instrumenting your target, all previous compilers now symlink to it. We have hacked it so that our *bug-severity run-time dependency* can be linked into the target binary. If *afl-cc* couldn't be built and work properly, then all is over.
 
 ## Usage Example
 
-**Note: <project_path> stands for the directory of your project.**
+For a quick start with *Evocatio*, you can follow these steps to start from scratch:
 
-In this section, you can follow the steps to start from a clean container(e.g. UBUNTU 18.04):
-
-1. Prepare necessary system environment and Evocatio referring to section *Building*.
+1. Download *Evocatio* into your system. Install dependencies and build Evocatio.
 
 2. Get your target program and POC.
 
-3. Revise target C file, insert following codes in the end of the file:
+3. Compile and instrument your target program with *AddressSanitizer* enabled just as same as when using *afl++*.
 
-    ```C
-    #include "sanitizer/asan_interface.h"
-    #include "my_asan_on_error.h"
-    void __asan_on_error() {
-        __my_asan_on_error();
-    }
-    ```
+   :warning: Ensure that *AddressSanitizer* is applied for your target. It is strongly recommended that set the environment variable `AFL_USE_ASAN=1` to tell  *afl-cc* do everything for you. Manually using compiler flag `-fsanitize=address` as [the doc says](https://github.com/google/sanitizers/wiki/AddressSanitizer) is also an alternative. 
 
-4. If needed, revise `instrument.sh` before you use it to compile target program.
-
-5. Compile target program:
+4. **Evocatio Function Module** :one: : **POC Minimization**
 
     ```bash
-    sh /<project_path>/instrument.sh
-    ```
-
-6. Evocatio Function Module 1: POC Minimization (with `asan_afl_new.c`)
-
-    ```bash
-    ./<project_path>/bug-severity-AFLplusplus/afl-tmin-lazy -m none -i /path/to/original/poc -o /path/to/minimized/poc -- /path/to/target/program @@
+    ./bug-severity-AFLplusplus/afl-tmin-lazy -m none -i /path/to/original/poc -o /path/to/minimized/poc -- /path/to/target/program @@
     ```
 
     "@@" is a placeholder like in AFL++. If there are any commands surrounding "@@", keep them.
 
-7. Evocatio Function Module 2: Critical Bytes Inference (with `asan_afl_new.c`)
+5. **Evocatio Function Module** :two: : **Critical Bytes Inference**
 
     ```bash
-    mkdir /<project_path>/seeds
-    AFL_TMIN_EXACT=1 /<project_path>/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k /<project_path>/seeds/ -- /path/to/target/program @@
+    mkdir <your_path>/seeds
+    AFL_TMIN_EXACT=1 ./bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k <your_path>/seeds -- /path/to/target/program @@
     ```
 
-    The output will be in `/<project_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `/<project_path>/seeds/` as your fuzzer's original seeds.
+    The output will be in `<your_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `<your_path>/seeds/` as your fuzzer's original seeds.
 
-8. Evocatio Function Module 3: CapFuzz (with `asan_afl_ori.c`)
+6. **Evocatio Function Module** :three: : **CapFuzz**
 
-    Recompile CapSan and target program:
+    Start CapFuzz with environment variable `EVOCATIO_CAPFUZZ` set:
 
     ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_ori.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    sh /<project_path>/instrument.sh
+    EVOCATIO_CAPFUZZ=1 ./bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
     ```
 
-    Start CapFuzz:
+    :warning: Set the environment variable `EVOCATIO_CAPFUZZ=1` **when and only when** using CapFuzz. When your use other Evocatio's modules, please ensure that `EVOCATIO_CAPFUZZ` is **deleted**. (**NOT** `EVOCATIO_CAPFUZZ=0` !!!) Incorrect use of `EVOCATIO_CAPFUZZ` will lead to fatal errors.
 
-    ```bash
-    ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
-    ```
-
-9. Evocatio Function Module 4: Bug Capability Scaning (with `asan_afl_new.c`)
-
-    Recompile CapSan and target program:
-
-    ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    sh /<project_path>/instrument.sh
-    ```
+7. **Evocatio Function Module** :four: : **Bug Capability Scaning**
 
     Scan capabilities of poc:
 
     ```bash
-    python3 /<project_path>/scripts/gen_raw_data_for_cve.py -i /path/to/new/crashes -o /path/to/bug/capability/json -b /path/to/target/program -a /path/to/commmands/file
+    python3 ./scripts/gen_raw_data_for_cve.py -i /path/to/new/crashes -o /path/to/bug/capability/json -b /path/to/target/program -a /path/to/commmands/file
     ```
 
     -i argument receives path to new pocs found by CapFuzz;  
@@ -154,17 +108,15 @@ In this section, you can follow the steps to start from a clean container(e.g. U
     -b argument receives path to the target program(binary);  
     -a argument receives path to commands file(which means you should write commands surrounding "@@" to a file first).
 
-10. Evocatio Function Module 5: Severity Score (with `asan_afl_new.c`)
+8.  **Evocatio Function Module** :five: : **Severity Score**
 
     ```bash
-    python3 /<project_path>/scripts/calculate_severity_score.py -i /path/to/bug/capability/json
+    python3 ./scripts/calculate_severity_score.py -i /path/to/bug/capability/json
     ```
 
     This will calulate bug severity score from bug capability json file. The severity score consists of reading score and writing score.
 
 For detailed example, please refer to README in each subdirectory.
-
-**NOTE:Everytime switching to a different Evocatio Function Module, please make sure that you compile CapSan with correspoding `asan_afl_ori.c` or `asan_afl_new.c`, which is indicated in each module. And then recompile target program too.**
 
 ## Development
 

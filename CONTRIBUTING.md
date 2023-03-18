@@ -17,14 +17,7 @@ some other new Sanitizers, which can support more bug types. By modifying
 *CapSan*, Evocatio can explore the capabilities for more bug types, which would be
 a very valuable work.
 
-Adding support for other Sanitizers in *CapSan* will be a very simple task. Users
-only need to use the API provided by Sanitizer to obtain the capability
-information they want to monitor
-(https://github.com/HexHive/Evocatio/blob/main/lib/asan/afl/asan_afl.c#L153),
-perform hash calculations on all capability information
-(https://github.com/HexHive/Evocatio/blob/main/lib/asan/afl/asan_afl.c#L207),
-and recompile *CapSan*. Since *CapSan* and *CapFuzz* are completely independent,
-adding new Sanitizer support does not require modifying *CapFuzz*.
+Adding support for other Sanitizers in *CapSan* is easy. You can firstly use the public interfaces provided by the new Sanitizer to obtain and process the capability information you want to monitor (implemented in [bug-severity-rt.o.c](https://github.com/HexHive/Evocatio/blob/main/bug-severity-AFLplusplus/instrumentation/bug-severity-rt.o.c)), then hack [afl-cc.c](https://github.com/HexHive/Evocatio/blob/main/bug-severity-AFLplusplus/instrumentation/bug-severity-AFLplusplus/src/afl-cc.c) to link the run-time dependency at the time of the new Sanitizer being applied by your compiler suite.
 
 We think the follwing sanitizers worth being added to Evocatio:
 - [UBSan](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -52,11 +45,3 @@ exploration is different from traditional bug finding tools (coverage
 improvement is not the main purpose of CapFuzz), some optimization strategies
 for fuzz testing technology itself proposed by the academic community can also
 be applied to CapFuzz in theory.
-
-## Do not insert code into target program
-
-Currently CapSan needs to insert
-(https://github.com/HexHive/Evocatio/blob/main/lib/tiffcp.c#L1875) a small
-amount of code into the target program to set Asan's callback function, but this
-insertion can be avoided. Users can modify CapSan to set Asan's callback
-function in a more elegant way to avoid code insertion into the target program.

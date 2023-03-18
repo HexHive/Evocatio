@@ -17,7 +17,6 @@ Do a quick statical analyze on them
 capability_res_file = "/tmp/cap_res_file"
 asan_output_file = "/tmp/asan.out"
 eval_time_file = "/tmp/eval_time.res"
-cap_detail_json = "/tmp/cap_details.json"
 
 IS_RAW_DATA = 1
 
@@ -96,7 +95,7 @@ class RawDataGenetator:
         self.orig_offset_write = set()
 
     def dump_cap_details_json(self):
-        with open(cap_detail_json, "w") as f:
+        with open(self._crash_target_dir, "w") as f:
             content = dict()
 
             content["bug_type"] = self.bug_type
@@ -569,10 +568,10 @@ class RawDataGenetator:
                 self.invalid_access_cap[access_type][access_len].add(access_addr)
                 continue
 
-    def dump_human_read_res(self):
-        with open(self._crash_target_dir, "w") as f:
-            json_str = json.dumps(self._human_read_merged_res)
-            f.writelines(json_str)
+    #def dump_human_read_res(self):
+    #    with open(self._crash_target_dir, "w") as f:
+    #        json_str = json.dumps(self._human_read_merged_res)
+    #        f.writelines(json_str)
 
     def get_cap_res(self):
 

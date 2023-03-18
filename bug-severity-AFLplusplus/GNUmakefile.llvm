@@ -463,11 +463,11 @@ document:
 
 ./bug-severity-rt-32.o: instrumentation/bug-severity-rt.o.c
 	@printf "[*] Building 32-bit variant of bug-severity runtime (-m32)... "
-	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m32 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; ln -sf bug-severity-rt-32.o bug-severity-llvm-rt-32.o; else echo "bug-severity-rt failed"; exit 1; fi
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m32 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; ln -sf bug-severity-rt-32.o bug-severity-llvm-rt-32.o; else echo "bug-severity-rt failed (that's fine)"; fi
 
 ./bug-severity-rt-64.o: instrumentation/bug-severity-rt.o.c
 	@printf "[*] Building 64-bit variant of bug-severity runtime (-m64)... "
-	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; ln -sf bug-severity-rt-64.o bug-severity-llvm-rt-64.o; else echo "bug-severity-rt failed"; exit 1; fi
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; ln -sf bug-severity-rt-64.o bug-severity-llvm-rt-64.o; else echo "bug-severity-rt failed (that's fine)"; fi
 
 .PHONY: test_build
 test_build: $(PROGS)

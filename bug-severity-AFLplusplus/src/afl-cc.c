@@ -716,6 +716,7 @@ static void edit_params(u32 argc, char **argv, char **envp) {
     if (lto_mode && !strncmp(cur, "--ld-path=", 10)) continue;
     if (!strncmp(cur, "-fno-unroll", 11)) continue;
     if (strstr(cur, "afl-compiler-rt") || strstr(cur, "afl-llvm-rt")) continue;
+    if (strstr(cur, "bug-severity-rt") || strstr(cur, "bug-severity-llvm-rt")) continue;
     if (!strcmp(cur, "-Wl,-z,defs") || !strcmp(cur, "-Wl,--no-undefined") ||
         !strcmp(cur, "--no-undefined")) {
 
@@ -1022,6 +1023,41 @@ static void edit_params(u32 argc, char **argv, char **envp) {
   }
 
 #ifndef __ANDROID__
+
+  if (asan_set || getenv("AFL_USE_ASAN")) {
+
+    switch (bit_mode) {
+
+      case 0:
+        if (!shared_linking && !partial_linking)
+          cc_params[cc_par_cnt++] =
+              alloc_printf("%s/bug-severity-rt.o", obj_path);
+        break;
+
+      case 32:
+        if (!shared_linking && !partial_linking) {
+
+          cc_params[cc_par_cnt++] =
+              alloc_printf("%s/bug-severity-rt-32.o", obj_path);
+          if (access(cc_params[cc_par_cnt - 1], R_OK))
+            FATAL("-m32 is not supported by your compiler");
+
+        }
+        break;
+
+      case 64:
+        if (!shared_linking && !partial_linking) {
+
+          cc_params[cc_par_cnt++] =
+              alloc_printf("%s/bug-severity-rt-64.o", obj_path);
+          if (access(cc_params[cc_par_cnt - 1], R_OK))
+            FATAL("-m64 is not supported by your compiler");
+
+        }
+        break;
+
+    }
+  }
 
   if (compiler_mode != GCC && compiler_mode != CLANG) {
 
@@ -2084,7 +2120,21 @@ int main(int argc, char **argv, char **envp) {
 
   }
 
-  if (debug) { DEBUGF("rt=%s obj_path=%s\n", ptr, obj_path); }
+  if (debug) { DEBUGF("afl-compiler-rt=%s ", ptr); }
+
+  ck_free(ptr);
+
+  ptr = find_object("bug-severity-rt.o", argv[0]);
+
+  if (!ptr) {
+
+    FATAL(
+        "Unable to find 'bug-severity-rt.o'. Please set the AFL_PATH "
+        "environment variable.");
+
+  }
+
+  if (debug) { DEBUGF("bug-severity-rt=%s obj_path=%s\n", ptr, obj_path); }
 
   ck_free(ptr);
 #endif

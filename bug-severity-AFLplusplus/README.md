@@ -8,14 +8,19 @@ Third, make the most of the output of **POC Minimization** and **Critical Bytes 
 
 ## Building
 
-**Note: <project_path> stands for the directory of your project.**
-
-To build, try:
+Just build *bug-severity-AFLplusplus* like what is needed for *afl++*:
 
 ```bash
-cd /<project_path>/bug-severity-AFLplusplus/
 make source-only NO_SPLICING=1
 ```
+
+:warning: Warning:
+
+ - Ensure that `NO_SPLICING=1` is always used there.
+
+ - Never use `ASAN_BUILD=1`. Otherwise our *bug-severity run-time dependency* may confuse your compiler and linker, as well as AddressSanitizer.
+
+ - Since *afl++ 3.0* there is only one compiler *afl-cc* works for instrumenting your target, all previous compilers now symlink to it. We have hacked it so that our *bug-severity run-time dependency* can be linked into the target binary. If *afl-cc* couldn't be built and work properly, then all is over.
 
 ## Usage
 
@@ -25,49 +30,15 @@ For **Critical Bytes Inference** only, go steps 1-2-3-5.
 For **CapFuzz** only, go steps 1-2-3-6.  
 You can also use two of 4,5,6.
 
-1. Prepare system environment and build *bug-severity-AFLplusplus*.
+1. Install dependencies and build *bug-severity-AFLplusplus*.
 
 2. Get your target program and POC.
 
-3. Revise target C file, insert following codes in the end of the file:
+3. Compile and instrument your target program with *AddressSanitizer* enabled just as same as when using *afl++*.
+   
+   :warning: Ensure that *AddressSanitizer* is applied for your target. It is strongly recommended that set the environment variable `AFL_USE_ASAN=1` to tell  *afl-cc* do everything for you. Manually using compiler flag `-fsanitize=address` as [the doc says](https://github.com/google/sanitizers/wiki/AddressSanitizer) is also an alternative. 
 
-    ```C
-    #include "sanitizer/asan_interface.h"
-    #include "my_asan_on_error.h"
-    void __asan_on_error() {
-        __my_asan_on_error();
-    }
-    ```
-
-    Then revise `instrument.sh` and compile target program:
-
-    ```bash
-    sh /<project_path>/instrument.sh
-
-    # EXAMPLE:
-    # sh /root/instrument.sh
-    ```
-
-    This step is used for instrumenting target program. You can also use other sanitizer as well. If so, please revise flags in `instrument.sh` adapting to your sanitizer.
-
-4. **POC Minimization** (with `asan_afl_new.c`)
-
-    Compile *lib*(CapSan) with `asan_afl_new.c` and compile target program:
-
-    ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    sh /<project_path>/instrument.sh
-
-    # EXAMPLE:
-    # cp /root/lib/asan/afl/asan_afl_new.c /root/lib/asan/afl/asan_afl.c
-    # cd /root/lib/build
-    # cmake ..
-    # make
-    # sh /root/instrument.sh
-    ```
+4. **POC Minimization**
 
     Trim original POC:
 
@@ -80,24 +51,7 @@ You can also use two of 4,5,6.
 
     "@@" is a placeholder like in AFL++. If there are any commands surrounding "@@", keep them.
 
-5. **Critical Bytes Inference** (with `asan_afl_new.c`)
-
-    Compile *lib*(CapSan) with `asan_afl_new.c` and compile target program:
-
-    ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_new.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    sh /<project_path>/instrument.sh
-
-    # EXAMPLE:
-    # cp /root/lib/asan/afl/asan_afl_new.c /root/lib/asan/afl/asan_afl.c
-    # cd /root/lib/build
-    # cmake ..
-    # make
-    # sh /root/instrument.sh
-    ```
+5. **Critical Bytes Inference**
 
     Analyze critical input bytes:
 
@@ -112,34 +66,19 @@ You can also use two of 4,5,6.
 
     The output will be in `/<project_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `/<project_path>/seeds/` as your fuzzer's original seeds.
 
-6. **CapFuzz** (with `asan_afl_ori.c`)
+6. **CapFuzz**
 
-    Compile *lib*(CapSan) with `asan_afl_ori.c` and compile target program:
-
-    ```bash
-    cp /<project_path>/lib/asan/afl/asan_afl_ori.c /<project_path>/lib/asan/afl/asan_afl.c
-    cd /<project_path>/lib/build
-    cmake ..
-    make
-    sh /<project_path>/instrument.sh
-
-    # EXAMPLE:
-    # cp /root/lib/asan/afl/asan_afl_ori.c /root/lib/asan/afl/asan_afl.c
-    # cd /root/lib/build
-    # cmake ..
-    # make
-    # sh /root/instrument.sh
-    ```
-
-    Start CapFuzz:
+    Start CapFuzz with environment variable `EVOCATIO_CAPFUZZ` set:
 
     ```bash
-    ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
+    EVOCATIO_CAPFUZZ=1 ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
 
     # EXAMPLE:
     # mkdir /root/out_put
     # ./root/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /root/seeds -o /root/out_put/ -k /root/poc -- /root/libtiff/tools/tiffcrop -H 341 @@ /tmp/foo
     ```
+
+    :warning: Set the environment variable `EVOCATIO_CAPFUZZ=1` **when and only when** using CapFuzz. When your use other Evocatio's modules, please ensure that `EVOCATIO_CAPFUZZ` is **deleted**. (**NOT** `EVOCATIO_CAPFUZZ=0` !!!) Incorrect use of `EVOCATIO_CAPFUZZ` will lead to fatal errors.
 
     If you didn't go step-5 before, just copy your POC or other seeds into `/path/to/input/seeds/`.
 

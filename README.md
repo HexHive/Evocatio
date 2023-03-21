@@ -124,9 +124,12 @@ Evocatio provides users with a flexible framework that allows developers to flex
 
 ## Contact
 
-Questions? Concerns? Feel free to ping me via [E-mail](supermolejzy@gmail.com).
+Questions? Concerns? Feel free to ping me via [E-mail](supermolejzy@gmail.com) for general questions and academic discussion.
 
-For recent update and new features implementation, please ping Mao who is pushing this project forward via [E-mail](maolc93@126.com).
+For recent update and new features implementation：
+- CapSan related issue/usage/feature: ping Sonic via [E-mail](observer000@qq.com)
+- Next generation of Evocatio: ping Zhao via [E-mail](zhaowei_1999@qq.com)
+- Installation, environment or other Evocatio questions: ping Mao via [E-mail](maolc93@126.com).
 
 ## Cite
 

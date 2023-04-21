@@ -63,6 +63,9 @@ static u8 *mask_bitmap;                /* Mask for trace bits (-B)          */
 static u8 *in_file,                    /* Minimizer input test case         */
     *out_file, *output_file;           /* Minimizer output file             */
 
+static u8 *pCapResFilePath;            /* Specify env var EVOCATIO_RESPATH  */
+static u8 remove_cap_res_f;            /* remove cap_res_file on exit?      */
+
 static u8 *in_data;                    /* Input data for trimming           */
 
 static u32 in_len,                     /* Input data length                 */
@@ -205,7 +208,7 @@ static void at_exit_handler(void) {
 
   afl_fsrv_killall();
   if (remove_out_file) unlink(out_file);
-
+  if (remove_cap_res_f) unlink(pCapResFilePath);
 }
 
 /* Read initial file. */
@@ -672,6 +675,26 @@ static void set_up_environment(afl_forkserver_t *fsrv, char **argv) {
   fsrv->out_fd = open(out_file, O_RDWR | O_CREAT | O_EXCL, DEFAULT_PERMISSION);
 
   if (fsrv->out_fd < 0) { PFATAL("Unable to create '%s'", out_file); }
+
+  /* Set for Evocatio */
+
+  unsetenv(EVOCATIO_ENV_CAPFUZZ);
+
+  pCapResFilePath = get_afl_env(EVOCATIO_ENV_RESPATH);
+  if (!pCapResFilePath) {
+
+    u8 *use_dir = ".";
+    if (access(use_dir, R_OK | W_OK | X_OK)) {
+        use_dir = get_afl_env("TMPDIR");
+        if (!use_dir) { use_dir = "/tmp"; }
+    }
+
+    pCapResFilePath = alloc_printf("%s/.afl-tmin-temp-CapResFile-%u", use_dir, (u32)getpid());
+    setenv(EVOCATIO_ENV_RESPATH, pCapResFilePath, 0);
+    remove_cap_res_f = 1;
+  }
+
+  unlink(pCapResFilePath);
 
   /* Set sane defaults... */
 
@@ -1310,6 +1333,10 @@ int main(int argc, char **argv_orig, char **envp) {
   out_file = NULL;
 
   close(write_to_file(output_file, in_data, in_len));
+
+  if (remove_cap_res_f) unlink(pCapResFilePath);
+  if (pCapResFilePath) { ck_free(pCapResFilePath); }
+  pCapResFilePath = NULL;
 
   OKF("We're done here. Have a nice day!\n");
 

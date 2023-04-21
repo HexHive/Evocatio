@@ -1639,6 +1639,15 @@ int main(int argc, char **argv_orig, char **envp) {
 
   if (!afl->fsrv.out_file) { setup_stdio_file(afl); }
 
+  /* Set for Evocatio CapFuzz. Seems UNNECESSARY to check so many stuffs. :) */
+
+  setenv(EVOCATIO_ENV_CAPFUZZ, "1", 1);
+  if (!(afl->fsrv.pCapResFilePath = get_afl_env(EVOCATIO_ENV_RESPATH))) {
+    //if user set it, we just use it. Otherwise use a default.
+    afl->fsrv.pCapResFilePath = alloc_printf("%s/.cap_res_file", afl->tmp_dir);
+    setenv(EVOCATIO_ENV_RESPATH, afl->fsrv.pCapResFilePath, 1);
+  }
+
   if (afl->cmplog_binary) {
 
     if (afl->unicorn_mode) {

@@ -63,6 +63,8 @@ typedef struct afl_forkserver {
   u8 *out_file,                         /* File to fuzz, if any             */
       *target_path;                     /* Path of the target               */
 
+  u8 *pCapResFilePath;                  /* Specify env var EVOCATIO_RESPATH */
+
   FILE *plot_file;                      /* Gnuplot output file              */
 
   /* Note: last_run_timed_out is u32 to send it to the child as 4 byte array */

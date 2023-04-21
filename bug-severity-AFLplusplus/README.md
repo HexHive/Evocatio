@@ -57,28 +57,26 @@ You can also use two of 4,5,6.
 
     ```bash
     mkdir /<project_path>/seeds
-    AFL_TMIN_EXACT=1 /<project_path>/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k /<project_path>/seeds/ -- /path/to/target/program @@
+    /<project_path>/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k /<project_path>/seeds/ -- /path/to/target/program @@
 
     # EXAMPLE:
     # mkdir /root/seeds
-    # AFL_TMIN_EXACT=1 /root/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /root/poc -o /tmp/foo -g -c /tmp/constraints.res -k /root/seeds/ -- /root/libtiff/tools/tiffcrop -H 341 @@ /tmp/foo
+    # /root/bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /root/poc -o /tmp/foo -g -c /tmp/constraints.res -k /root/seeds/ -- /root/libtiff/tools/tiffcrop -H 341 @@ /tmp/foo
     ```
 
     The output will be in `/<project_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `/<project_path>/seeds/` as your fuzzer's original seeds.
 
 6. **CapFuzz**
 
-    Start CapFuzz with environment variable `EVOCATIO_CAPFUZZ` set:
+    Start CapFuzz:
 
     ```bash
-    EVOCATIO_CAPFUZZ=1 ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
+    ./<project_path>/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
 
     # EXAMPLE:
     # mkdir /root/out_put
     # ./root/bug-severity-AFLplusplus/afl-fuzz -m none -C -i /root/seeds -o /root/out_put/ -k /root/poc -- /root/libtiff/tools/tiffcrop -H 341 @@ /tmp/foo
     ```
-
-    :warning: Set the environment variable `EVOCATIO_CAPFUZZ=1` **when and only when** using CapFuzz. When your use other Evocatio's modules, please ensure that `EVOCATIO_CAPFUZZ` is **deleted**. (**NOT** `EVOCATIO_CAPFUZZ=0` !!!) Incorrect use of `EVOCATIO_CAPFUZZ` will lead to fatal errors.
 
     If you didn't go step-5 before, just copy your POC or other seeds into `/path/to/input/seeds/`.
 

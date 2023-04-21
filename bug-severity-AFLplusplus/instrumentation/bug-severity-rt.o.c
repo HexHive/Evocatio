@@ -1,3 +1,4 @@
+#include "config.h"
 #include "sanitizer/asan_interface.h"
 
 #include <fcntl.h>
@@ -5,15 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EVOCATIO_ENV_CAPFUZZ "EVOCATIO_CAPFUZZ"
-#define EVOCATIO_ENV_RESPATH "EVOCATIO_RESPATH"
-#define EVOCATIO_DEFAULT_RESPATH "/tmp/cap_res_file"
-#define EVOCATIO_DEFAULT_PERMISSION 0600
-#define EVOCATIO_IDENTIFIER "@@"
-
-static uint8_t already_init  = 0;
-static uint8_t using_capfuzz = 0;
-static uint8_t* cap_res_path;
+static uint8_t __afl_evocatio_already_init = 0;
+static uint8_t __afl_using_capfuzz = 0;
+static uint8_t* __afl_cap_res_path;
 
 static unsigned int __afl_evocatio_GetHash(char* str, unsigned int len)
 {
@@ -63,13 +58,13 @@ static inline void __afl_evocatio_WriteCapHash(char *path, uint64_t *cap_hash) {
 }
 
 static inline void __afl_evocatio_TryInit() {
-    if (!already_init) {
-        if (getenv(EVOCATIO_ENV_CAPFUZZ)) using_capfuzz = 1;
-        cap_res_path = getenv(EVOCATIO_ENV_RESPATH);
-        if (!cap_res_path) {
-            cap_res_path = EVOCATIO_DEFAULT_RESPATH;
+    if (!__afl_evocatio_already_init) {
+        if (getenv(EVOCATIO_ENV_CAPFUZZ)) __afl_using_capfuzz = 1;
+        __afl_cap_res_path = getenv(EVOCATIO_ENV_RESPATH);
+        if (!__afl_cap_res_path) {
+            __afl_cap_res_path = EVOCATIO_DEFAULT_RESPATH;
         }
-        already_init = 1;
+        __afl_evocatio_already_init = 1;
     }
 }
 
@@ -94,12 +89,12 @@ static inline void __afl_evocatio_GetCapability() {
 
     char *hash_string_ori = (char *) malloc(100);
 
-    if (!using_capfuzz) {
+    if (!__afl_using_capfuzz) {
         strcpy(hash_string_ori, bugT);            strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
         strcat(hash_string_ori, operaT);          strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
         strcat(hash_string_ori, accessLen_buf);   strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
         strcat(hash_string_ori, invalidAddr_buf); strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
-        __afl_evocatio_WriteCapText(cap_res_path, hash_string_ori);
+        __afl_evocatio_WriteCapText(__afl_cap_res_path, hash_string_ori);
         return;
     }
 
@@ -142,7 +137,7 @@ static inline void __afl_evocatio_GetCapability() {
     capability_hash = __afl_evocatio_GetHash(hash_string_ori, strlen(hash_string_ori));
 
     //printf("capability hash is: %lu\n", capability_hash);
-    __afl_evocatio_WriteCapHash(cap_res_path, capability_hash);
+    __afl_evocatio_WriteCapHash(__afl_cap_res_path, capability_hash);
     return;
 }
 

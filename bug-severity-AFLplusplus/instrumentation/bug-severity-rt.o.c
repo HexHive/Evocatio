@@ -79,7 +79,7 @@ static inline void __afl_evocatio_GetCapability() {
     void       *invalidAddr;
     uint64_t   accessLen;
 
-    const char *objectType;
+    //const char *objectType;
     uint64_t   allocStackHash;
 
     bugT        = __asan_get_report_description();
@@ -103,9 +103,11 @@ static inline void __afl_evocatio_GetCapability() {
         return;
     }
 
+    /* DEADLOCK RISK - DO NOT USE! 
+       https://github.com/llvm/llvm-project/issues/61860 */
     // Get object type
-    char varName[100];
-    objectType = __asan_locate_address(invalidAddr, varName, 100, NULL, NULL);
+    //char varName[100];
+    //objectType = __asan_locate_address(invalidAddr, varName, 100, NULL, NULL);
 
     // Get allocation stack trace
     size_t maxAllocFrames = 20;
@@ -132,7 +134,7 @@ static inline void __afl_evocatio_GetCapability() {
     strcpy(hash_string_ori, bugT);
     strcat(hash_string_ori, operaT);
     strcat(hash_string_ori, accessLen_buf);
-    strcat(hash_string_ori, objectType);
+    //strcat(hash_string_ori, objectType); //DEADLOCK RISK - DO NOT USE! https://github.com/llvm/llvm-project/issues/61860
     strcat(hash_string_ori, allocStackHash_buf);
     //strcat(hash_string_ori, invalidAddr_buf);
 

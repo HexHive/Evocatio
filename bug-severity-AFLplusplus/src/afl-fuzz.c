@@ -1639,6 +1639,35 @@ int main(int argc, char **argv_orig, char **envp) {
 
   if (!afl->fsrv.out_file) { setup_stdio_file(afl); }
 
+  /* Set for Evocatio CapFuzz. Seems UNNECESSARY to check so many stuffs. :) */
+
+  setenv(EVOCATIO_ENV_CAPFUZZ, "1", 1);
+  if (!(afl->fsrv.pCapResFilePath = get_afl_env(EVOCATIO_ENV_RESPATH))) {
+    //if user set it, we just use it. Otherwise use a default.
+    u8 cwd[PATH_MAX];
+    if (getcwd(cwd, (size_t)sizeof(cwd)) == NULL) { PFATAL("getcwd() failed"); }
+
+    if (afl->tmp_dir[0] == '/') //use path-detect behavior of .cur_input in detect_file_args
+      { afl->fsrv.pCapResFilePath = alloc_printf("%s/.cap_res_file"   ,      afl->tmp_dir); }
+    else
+      { afl->fsrv.pCapResFilePath = alloc_printf("%s/%s/.cap_res_file", cwd, afl->tmp_dir); }
+
+    if (unlink(afl->fsrv.pCapResFilePath) && errno != ENOENT) //make sure we start from scratch
+      { PFATAL("Your %s is bad", afl->fsrv.pCapResFilePath); }
+
+    setenv(EVOCATIO_ENV_RESPATH, afl->fsrv.pCapResFilePath, 1);
+  }
+#if EVOCATIO_PLZ_HELP_RESPATH
+  FILE *fp = fopen(afl->fsrv.pCapResFilePath, "w"); // use ANSI-C style, same as bug-severity-rt.o
+  if (fp) {
+    //it should indicate a safe virgin cap_res_file for both hash and text
+    fprintf(fp, "CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP");
+  } else {
+    PFATAL("Sorry I can't help %s", afl->fsrv.pCapResFilePath);
+  }
+  fclose(fp);
+#endif
+
   if (afl->cmplog_binary) {
 
     if (afl->unicorn_mode) {

@@ -716,7 +716,7 @@ static void edit_params(u32 argc, char **argv, char **envp) {
     if (lto_mode && !strncmp(cur, "--ld-path=", 10)) continue;
     if (!strncmp(cur, "-fno-unroll", 11)) continue;
     if (strstr(cur, "afl-compiler-rt") || strstr(cur, "afl-llvm-rt")) continue;
-    if (strstr(cur, "bug-severity-rt") || strstr(cur, "bug-severity-llvm-rt")) continue;
+    if (strstr(cur, "bug-severity-rt")) continue;
     if (!strcmp(cur, "-Wl,-z,defs") || !strcmp(cur, "-Wl,--no-undefined") ||
         !strcmp(cur, "--no-undefined")) {
 

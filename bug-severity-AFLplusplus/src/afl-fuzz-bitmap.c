@@ -216,33 +216,14 @@ void init_count_class16(void) {
 #endif
 
 /* check capability by reading capability hash from specific file */
-uint64_t check_capability() {
-  /* capability hash file path is fixed! */
-  char *cap_hash_file = "/tmp/cap_res_file";
+uint64_t check_capability(afl_forkserver_t *fsrv) {
   uint64_t result = 0;
 
-  FILE *fp = fopen(cap_hash_file,"r");
-  if (fp == NULL) {
-    PFATAL("Unable to open '%s'", cap_hash_file);
-    return -1;
-  }
+  FILE *fp = fopen(fsrv->pCapResFilePath, "r");
+  if (!fp) PFATAL("Unable to open '%s'", fsrv->pCapResFilePath);
 
-  fread(&result, 4, 1, fp);  // HACK! capability hash length is fixed now!
+  fread(&result, sizeof(u32), 1, fp); //must be consistent with __afl_evo_SaveCap
   fclose(fp);
-
-  /* remove the prev_addr file, so that we can know whether we are running a new poc */
-  if(access("/tmp/acc_addr_prev", F_OK) == 0) {
-    remove("/tmp/acc_addr_prev");
-  } else {
-    // file doesn't exist
-  }
-
-  /* remove the buffer_pc_prev file, so that we can know whether we are running a new poc */
-  if(access("/tmp/buffer_pc_prev", F_OK) == 0) {
-    remove("/tmp/buffer_pc_prev");
-  } else {
-    // file doesn't exist
-  }
 
   return result;
 }
@@ -367,7 +348,7 @@ static u8 trim_run_target(afl_forkserver_t *fsrv, u8 *mem, u32 len,
     /* Handle crashing inputs. */
 
     // Check whether the capability is still same after recover
-    u32 cap_hash_cur = check_capability();
+    u32 cap_hash_cur = check_capability(fsrv);
     if (cap_hash_cur != cap_hash_orig) {
       /* capability changed! */
       return 1;
@@ -404,7 +385,7 @@ void minimize(afl_state_t *afl, struct queue_entry *q, void *mem) {
    }
 
   // Initialize cap_hash before trim
-  cap_hash_before_trim = check_capability();
+  cap_hash_before_trim = check_capability(&afl->fsrv);
 
   // in_len stands for the length of union
   in_len = q->cur_mutate_pos_num;
@@ -523,12 +504,12 @@ void trim_union(afl_state_t *afl, struct queue_entry *q, void *mem) {
 /* return 0 ——> this is a new capability
  * return 1 ——> we have seen this capability before! */
 
-u8 is_old_capability() {
+u8 is_old_capability(afl_forkserver_t *fsrv) {
   int ret;
   khiter_t iter = 0;
 
   /* STEP One: calculate map index */
-  unsigned int cap_hash = check_capability();
+  unsigned int cap_hash = check_capability(fsrv);
 
   /* STEP Two: update the value in heatMap according to index */
   /* Check whether we have this key in hash map */
@@ -638,7 +619,7 @@ void update_heat_map(struct queue_entry *q) {
 
 /* Should only be used at the first run */
 void capability_init(afl_state_t *afl) {
-  u32 cap_hash_cur = check_capability();
+  u32 cap_hash_cur = check_capability(&afl->fsrv);
 
   afl->virgin_capability = cap_hash_cur;
 
@@ -713,7 +694,7 @@ inline void scan_seed_capability(afl_state_t *afl, struct queue_entry *q, u8 *us
   }
 
   /* Check whether current capability exist in virgin*/
-  is_old_capability();
+  is_old_capability(&afl->fsrv);
 
   /* Update union */
   trim_union(afl, q, use_mem);
@@ -728,7 +709,7 @@ inline void scan_seed_capability(afl_state_t *afl, struct queue_entry *q, u8 *us
 /* Check if the current seed brings any new capability */
 inline u8 has_new_capability(afl_state_t *afl, struct queue_entry *q, void *mem) {
 
-  u32 cap_hash_cur = check_capability();
+  u32 cap_hash_cur = check_capability(&afl->fsrv);
 
   /* Initialize virgin when this is first run */
   if (!afl->virgin_capability) {
@@ -737,13 +718,13 @@ inline u8 has_new_capability(afl_state_t *afl, struct queue_entry *q, void *mem)
     capability_init(afl);
     fuzzed_union_cnt = 0;
 
-    is_old_capability();
+    is_old_capability(&afl->fsrv);
 
     return 1;
   }
 
   /* Check whether current capability exist in virgin*/
-  if (is_old_capability()) {
+  if (is_old_capability(&afl->fsrv)) {
     /* We have seen this capability already! */
     return 0;
   }

@@ -80,20 +80,18 @@ For a quick start with *Evocatio*, you can follow these steps to start from scra
 
     ```bash
     mkdir <your_path>/seeds
-    AFL_TMIN_EXACT=1 ./bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k <your_path>/seeds -- /path/to/target/program @@
+    ./bug-severity-AFLplusplus/cd-bytes-identifier -m none -i /path/to/poc -o /tmp/foo -g -c /tmp/constraints.res -k <your_path>/seeds -- /path/to/target/program @@
     ```
 
     The output will be in `<your_path>/seeds/`. If you'd like to use another fuzzer later, you may use seeds in `<your_path>/seeds/` as your fuzzer's original seeds.
 
 6. **Evocatio Function Module** :three: : **CapFuzz**
 
-    Start CapFuzz with environment variable `EVOCATIO_CAPFUZZ` set:
+    Start CapFuzz:
 
     ```bash
-    EVOCATIO_CAPFUZZ=1 ./bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
+    ./bug-severity-AFLplusplus/afl-fuzz -m none -C -i /path/to/input/seeds/ -o /path/to/output/ -k /path/to/original/poc -- /path/to/target/program @@
     ```
-
-    :warning: Set the environment variable `EVOCATIO_CAPFUZZ=1` **when and only when** using CapFuzz. When your use other Evocatio's modules, please ensure that `EVOCATIO_CAPFUZZ` is **deleted**. (**NOT** `EVOCATIO_CAPFUZZ=0` !!!) Incorrect use of `EVOCATIO_CAPFUZZ` will lead to fatal errors.
 
 7. **Evocatio Function Module** :four: : **Bug Capability Scaning**
 

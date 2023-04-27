@@ -23,6 +23,15 @@
 #ifndef _HAVE_CONFIG_H
 #define _HAVE_CONFIG_H
 
+/* For Evocatio */
+#define EVOCATIO_ENV_CAPFUZZ "EVOCATIO_CAPFUZZ"
+#define EVOCATIO_ENV_RESPATH "EVOCATIO_RESPATH"
+#define EVOCATIO_DEFAULT_RESPATH "/tmp/cap_res_file"
+#define EVOCATIO_DEFAULT_PERMISSION 0666
+#define EVOCATIO_IDENTIFIER "@@"
+#define EVOCATIO_STACK_FRAME_MAXNUM 20
+#define EVOCATIO_PLZ_HELP_RESPATH 1
+
 /* Version string: */
 
 // c = release, a = volatile github dev, e = experimental branch

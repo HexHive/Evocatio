@@ -1652,8 +1652,21 @@ int main(int argc, char **argv_orig, char **envp) {
     else
       { afl->fsrv.pCapResFilePath = alloc_printf("%s/%s/.cap_res_file", cwd, afl->tmp_dir); }
 
+    if (unlink(afl->fsrv.pCapResFilePath) && errno != ENOENT) //make sure we start from scratch
+      { PFATAL("Your %s is bad", afl->fsrv.pCapResFilePath); }
+
     setenv(EVOCATIO_ENV_RESPATH, afl->fsrv.pCapResFilePath, 1);
   }
+#if EVOCATIO_PLZ_HELP_RESPATH
+  FILE *fp = fopen(afl->fsrv.pCapResFilePath, "w"); // use ANSI-C style, same as bug-severity-rt.o
+  if (fp) {
+    //it should indicate a safe virgin cap_res_file for both hash and text
+    fprintf(fp, "CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP");
+  } else {
+    PFATAL("Sorry I can't help %s", afl->fsrv.pCapResFilePath);
+  }
+  fclose(fp);
+#endif
 
   if (afl->cmplog_binary) {
 

@@ -222,7 +222,7 @@ uint64_t check_capability(afl_forkserver_t *fsrv) {
   FILE *fp = fopen(fsrv->pCapResFilePath, "r");
   if (!fp) PFATAL("Unable to open '%s'", fsrv->pCapResFilePath);
 
-  fread(&result, 4, 1, fp);  // HACK! capability hash length is fixed now!
+  fread(&result, sizeof(u32), 1, fp); //must be consistent with __afl_evo_SaveCap
   fclose(fp);
 
   return result;

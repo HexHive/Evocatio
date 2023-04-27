@@ -1,4 +1,5 @@
 #include "config.h"
+#include "types.h"
 #include "sanitizer/asan_interface.h"
 
 #include <fcntl.h>
@@ -6,138 +7,170 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t __afl_evocatio_already_init = 0;
-static uint8_t __afl_using_capfuzz = 0;
-static uint8_t* __afl_cap_res_path;
+static u8  __afl_evo_already_init  = 0;
+static u8  __afl_evo_using_capfuzz = 0;
+static u8 *__afl_evo_cap_res_path;
 
-static unsigned int __afl_evocatio_GetHash(char* str, unsigned int len)
-{
-    unsigned int hash = 5381;
-    unsigned int i    = 0;
+static inline void __afl_evo_TryInit() {
+    if (likely(!__afl_evo_already_init)) {
+        if (getenv(EVOCATIO_ENV_CAPFUZZ)) 
+            { __afl_evo_using_capfuzz = 1; }
 
-    for(i = 0; i < len; str++, i++)
-    {
-        hash = ((hash << 5) + hash) + (*str);
+        if (!(__afl_evo_cap_res_path = getenv(EVOCATIO_ENV_RESPATH)))
+            { __afl_evo_cap_res_path = EVOCATIO_DEFAULT_RESPATH; }
+
+        __afl_evo_already_init = 1;
     }
+}
 
+static inline u32 __afl_evo_GetHash(char *str, u32 len) {
+//Use DJBHash (Daniel J. Bernstein). May switch to xxhash.h in future.
+    u32 hash = 5381;
+    for(u32 i = 0; i < len; ++i)
+      { hash = ((hash << 5) + hash) + (*str); str++;}
     return hash;
 }
 
-static inline void __afl_evocatio_WriteCapText(char *path, char *cap_text) {
-
-    uint8_t ret;
-
-    ret = open(path, O_RDWR | O_CREAT | O_EXCL, EVOCATIO_DEFAULT_PERMISSION);
-
-    if (ret < 0) {
-	    fprintf(stderr, "%s: Unable to create '%s'", __func__, path);
-    } else {
-	    FILE *fp = fopen(path,"w");
-	    fprintf(fp, "%s", cap_text);
-	    fclose(fp);
-    }
-
-    return;
-}
-
-static inline void __afl_evocatio_WriteCapHash(char *path, uint64_t *cap_hash) {
-
-    uint8_t ret;
-
-    ret = open(path, O_RDWR | O_CREAT | O_EXCL, EVOCATIO_DEFAULT_PERMISSION);
-
-    if (ret < 0) {
-	    fprintf(stderr, "%s: Unable to create '%s'", __func__, path);
-    } else {
-	    FILE *fp = fopen(path,"w");
-	    fwrite(&cap_hash, sizeof(cap_hash)/2, 1, fp);
-	    fclose(fp);
-    }
-
-    return;
-}
-
-static inline void __afl_evocatio_TryInit() {
-    if (!__afl_evocatio_already_init) {
-        if (getenv(EVOCATIO_ENV_CAPFUZZ)) __afl_using_capfuzz = 1;
-        __afl_cap_res_path = getenv(EVOCATIO_ENV_RESPATH);
-        if (!__afl_cap_res_path) {
-            __afl_cap_res_path = EVOCATIO_DEFAULT_RESPATH;
+static inline void __afl_evo_SaveCap(char *cap_text, u8 hashed) {
+    if (unlikely(!__afl_evo_cap_res_path)) return;
+    //Use ANSI-C style
+    FILE *fp = fopen(__afl_evo_cap_res_path, "w");
+    if (likely(fp)) {
+        if (unlikely(!hashed)) {
+            fprintf(fp, "%s", cap_text);
+            //fprintf(stderr, "CAP TEXT: %s", cap_text); //for debug
+        } else {
+            u32 cap_hash = __afl_evo_GetHash(cap_text, strlen(cap_text));
+            fwrite(&cap_hash, sizeof(u32), 1, fp);
+            //fprintf(stderr, "CAP HASH: %u", cap_hash); //for debug
         }
-        __afl_evocatio_already_init = 1;
+        fclose(fp);
+    } else {
+        fprintf(stderr, "%s: Unable to create '%s'", __func__, __afl_evo_cap_res_path);
     }
 }
 
-static inline void __afl_evocatio_GetCapability() {
-    const char *bugT;
-    char       *operaT;
-    void       *invalidAddr;
-    uint64_t   accessLen;
+static inline const char *__afl_evo_ChkBugType() { 
+    return __asan_get_report_description(); 
+}
 
-    //const char *objectType;
-    uint64_t   allocStackHash;
+static inline const char *__afl_evo_ChkOpsType() {
+    return __asan_get_report_access_type() ? "write": "read";
+}
 
-    bugT        = __asan_get_report_description();
-    operaT      = __asan_get_report_access_type() ? "write": "read";
-    invalidAddr = __asan_get_report_address();
-    accessLen   = __asan_get_report_access_size();
+static inline const char *__afl_evo_ChkObjType() {
+/* DEADLOCK RISK - DO NOT USE UNLESS SOLVED THIS ISSUE
+    https://github.com/llvm/llvm-project/issues/61860 */
+    void *obj_addr = __asan_get_report_address();
+    //Use like those in llvm-project/compiler-rt/test/asan/TestCases/debug_locate.cpp
+    return __asan_locate_address(obj_addr, NULL, 0, NULL, NULL);
+}
+
+static inline u64 __afl_evo_ChkInvalidAddr() {
+    return (u64) __asan_get_report_address();
+}
+
+static inline u64 __afl_evo_ChkAccessLen() {
+    return (u64) __asan_get_report_access_size();
+}
+
+static inline u32 __afl_evo_ChkStackHash() {
+    u32 stack_hash = 0;
+
+    void **frame_ptrs = malloc(EVOCATIO_STACK_FRAME_MAXNUM * sizeof(void*));
+    if (unlikely(!frame_ptrs)) {
+        fprintf(stderr, "%s: malloc failed", __func__);
+        return stack_hash;
+    }
     
-    char invalidAddr_buf[20];
-    snprintf(invalidAddr_buf, sizeof(invalidAddr_buf)-1, "%llu", (unsigned long long)invalidAddr);
-    char accessLen_buf[20];
-    snprintf(accessLen_buf, sizeof(accessLen_buf)-1, "%llu", (unsigned long long)accessLen);
+    void *assume_heap_addr = __asan_get_report_address();
+    size_t i;
+    size_t n_frames = __asan_get_alloc_stack(assume_heap_addr,
+                frame_ptrs, (size_t)EVOCATIO_STACK_FRAME_MAXNUM, NULL);
 
-    char *hash_string_ori = (char *) malloc(100);
+    if (n_frames > 0) {
+        // 1 pointer is N bytes in mem so need 2+(N<<1) hex numbers (max) in string "0xFF...". Don't forget '\0'.
+        u32   stack_len = 0;
+        char *stack_str = (char *) calloc(1 + n_frames * (2 + (sizeof(void*) << 1)), sizeof(char));
+        if (unlikely(!stack_str)) {
+            fprintf(stderr, "%s: calloc failed", __func__);
+            return stack_hash;
+        }
+        //make snprintf believe that it can write 0xFF...FF\0
+        size_t write_most = 1 + 2 + (sizeof(void*) << 1);
+        int    write_some = 0;
+        for (size_t i = 0; i < n_frames; ++i) {
+            write_some = snprintf((stack_str + stack_len), write_most, "%p", frame_ptrs[i]);
+            if (unlikely(write_some < 0 || write_some >= write_most)) break; //should never happen
+            stack_len += write_some;
+        }
+        stack_hash = __afl_evo_GetHash(stack_str, stack_len);
+        free(stack_str);
+    }
+    free(frame_ptrs);
+    return stack_hash;
+}
 
-    if (!__afl_using_capfuzz) {
-        strcpy(hash_string_ori, bugT);            strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
-        strcat(hash_string_ori, operaT);          strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
-        strcat(hash_string_ori, accessLen_buf);   strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
-        strcat(hash_string_ori, invalidAddr_buf); strcat(hash_string_ori, EVOCATIO_IDENTIFIER);
-        __afl_evocatio_WriteCapText(__afl_cap_res_path, hash_string_ori);
+static inline void __afl_evo_GetCapability() {
+    char * cap_text_buf = NULL;
+
+    const char * bugT   = __afl_evo_ChkBugType();
+    const char * operaT = __afl_evo_ChkOpsType();
+
+    u64  invalidAddr = __afl_evo_ChkInvalidAddr();
+    char invalidAddr_buf[1 + 20]; //max: "18446744073709551615\0"
+    snprintf(invalidAddr_buf, sizeof(invalidAddr_buf), "%llu", invalidAddr);
+
+    u64  accessLen = __afl_evo_ChkAccessLen();
+    char accessLen_buf[1 + 20]; //max: "18446744073709551615\0"
+    snprintf(accessLen_buf, sizeof(accessLen_buf), "%llu", accessLen);
+
+    if (unlikely(!__afl_evo_using_capfuzz)) {
+        cap_text_buf = (char *) calloc((
+                strlen(bugT)            + sizeof(EVOCATIO_IDENTIFIER)-1 + \
+                strlen(operaT)          + sizeof(EVOCATIO_IDENTIFIER)-1 + \
+                strlen(invalidAddr_buf) + sizeof(EVOCATIO_IDENTIFIER)-1 + \
+                strlen(accessLen_buf)   + sizeof(EVOCATIO_IDENTIFIER)
+            ), sizeof(char));
+
+        if(unlikely(!cap_text_buf)) {
+            fprintf(stderr, "%s: calloc failed", __func__);
+            return;
+        }
+
+        strcat(cap_text_buf, bugT);            strcat(cap_text_buf, EVOCATIO_IDENTIFIER);
+        strcat(cap_text_buf, operaT);          strcat(cap_text_buf, EVOCATIO_IDENTIFIER);
+        strcat(cap_text_buf, accessLen_buf);   strcat(cap_text_buf, EVOCATIO_IDENTIFIER);
+        strcat(cap_text_buf, invalidAddr_buf); strcat(cap_text_buf, EVOCATIO_IDENTIFIER);
+
+        __afl_evo_SaveCap(cap_text_buf, 0);
+        free(cap_text_buf);
         return;
     }
 
-    /* DEADLOCK RISK - DO NOT USE! 
-       https://github.com/llvm/llvm-project/issues/61860 */
-    // Get object type
-    //char varName[100];
-    //objectType = __asan_locate_address(invalidAddr, varName, 100, NULL, NULL);
+    u64  allocStackHash = __afl_evo_ChkStackHash();
+    char allocStackHash_buf[1 + 20]; //max: "18446744073709551615\0"
+    snprintf(allocStackHash_buf, sizeof(allocStackHash_buf), "%llu", allocStackHash);
 
-    // Get allocation stack trace
-    size_t maxAllocFrames = 20;
-    void **allocFrames = calloc(maxAllocFrames, sizeof(void*));
-    size_t nFrames= __asan_get_alloc_stack(invalidAddr, allocFrames, maxAllocFrames, NULL);
+    cap_text_buf = (char *) calloc((
+                strlen(bugT)            + strlen(operaT) + \
+                strlen(invalidAddr_buf) + strlen(accessLen_buf) + \
+                strlen(allocStackHash_buf) + 1
+            ), sizeof(char));
 
-    // Compute allocation stack trace hash
-    allocStackHash = 0;
-    char allocStackHash_buf[20] = "";
-    if (nFrames > 0) {
-        // Concatenate addresses
-        size_t len = 14*maxAllocFrames + 1;
-        char buff[len];
-        for (int i = 0; i < nFrames; i++)
-            snprintf(&(buff[14*i]), 15, "%p", allocFrames[i]);
-
-        allocStackHash = __afl_evocatio_GetHash(buff, strlen(buff));
-        snprintf(allocStackHash_buf, sizeof(allocStackHash_buf)-1, "%lu", allocStackHash);
+    if(unlikely(!cap_text_buf)) {
+        fprintf(stderr, "%s: calloc failed", __func__);
+        return;
     }
 
-    // Free allocFrames
-    free(allocFrames);
+    strcat(cap_text_buf, bugT);
+    strcat(cap_text_buf, operaT);
+    //strcat(cap_text_buf, invalidAddr_buf);//currently disabled for suitable sensitivity
+    strcat(cap_text_buf, accessLen_buf);
+    strcat(cap_text_buf, allocStackHash_buf);
 
-    strcpy(hash_string_ori, bugT);
-    strcat(hash_string_ori, operaT);
-    strcat(hash_string_ori, accessLen_buf);
-    //strcat(hash_string_ori, objectType); //DEADLOCK RISK - DO NOT USE! https://github.com/llvm/llvm-project/issues/61860
-    strcat(hash_string_ori, allocStackHash_buf);
-    //strcat(hash_string_ori, invalidAddr_buf);
-
-    uint64_t capability_hash = 0;
-    capability_hash = __afl_evocatio_GetHash(hash_string_ori, strlen(hash_string_ori));
-
-    //printf("capability hash is: %lu\n", capability_hash);
-    __afl_evocatio_WriteCapHash(__afl_cap_res_path, capability_hash);
+    __afl_evo_SaveCap(cap_text_buf, 1);
+    free(cap_text_buf);
     return;
 }
 
@@ -149,6 +182,6 @@ static inline void __afl_evocatio_GetCapability() {
  * SANITIZER_INTERFACE_WEAK_DEF(void, __asan_on_error, void) {}
 */
 void __asan_on_error(void) {
-    __afl_evocatio_TryInit();
-    __afl_evocatio_GetCapability();
+    __afl_evo_TryInit();
+    __afl_evo_GetCapability();
 }

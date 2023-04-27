@@ -517,12 +517,7 @@ void afl_fsrv_start(afl_forkserver_t *fsrv, char **argv,
              "malloc_context_size=0:"
              "symbolize=0:"
              "allocator_may_return_null=1:"
-             "detect_odr_violation=0:"
-             "handle_segv=0:"
-             "handle_sigbus=0:"
-             "handle_abort=0:"
-             "handle_sigfpe=0:"
-             "handle_sigill=0",
+             "detect_odr_violation=0",
              1);
 
     /* Set sane defaults for UBSAN if nothing else is specified. */
@@ -533,12 +528,7 @@ void afl_fsrv_start(afl_forkserver_t *fsrv, char **argv,
              "abort_on_error=1:"
              "malloc_context_size=0:"
              "allocator_may_return_null=1:"
-             "symbolize=0:"
-             "handle_segv=0:"
-             "handle_sigbus=0:"
-             "handle_abort=0:"
-             "handle_sigfpe=0:"
-             "handle_sigill=0",
+             "symbolize=0",
              1);
 
     /* Envs for QASan */
@@ -555,12 +545,7 @@ void afl_fsrv_start(afl_forkserver_t *fsrv, char **argv,
            "abort_on_error=1:"
            "malloc_context_size=0:"
            "allocator_may_return_null=1:"
-           "msan_track_origins=0:"
-           "handle_segv=0:"
-           "handle_sigbus=0:"
-           "handle_abort=0:"
-           "handle_sigfpe=0:"
-           "handle_sigill=0",
+           "msan_track_origins=0",
            1);
 
     /* LSAN, too, does not support abort_on_error=1. */

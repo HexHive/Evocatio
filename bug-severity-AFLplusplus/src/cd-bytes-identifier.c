@@ -1518,12 +1518,7 @@ static void set_up_environment(afl_forkserver_t *fsrv, char **argv) {
          "detect_leaks=0:"
          "allocator_may_return_null=1:"
          "symbolize=0:"
-         "detect_odr_violation=0:"
-         "handle_segv=0:"
-         "handle_sigbus=0:"
-         "handle_abort=0:"
-         "handle_sigfpe=0:"
-         "handle_sigill=0",
+         "detect_odr_violation=0",
          0);
 
   setenv("UBSAN_OPTIONS",
@@ -1531,24 +1526,14 @@ static void set_up_environment(afl_forkserver_t *fsrv, char **argv) {
          "abort_on_error=1:"
          "malloc_context_size=0:"
          "allocator_may_return_null=1:"
-         "symbolize=0:"
-         "handle_segv=0:"
-         "handle_sigbus=0:"
-         "handle_abort=0:"
-         "handle_sigfpe=0:"
-         "handle_sigill=0",
+         "symbolize=0",
          0);
 
   setenv("MSAN_OPTIONS", "exit_code=" STRINGIFY(MSAN_ERROR) ":"
                          "abort_on_error=1:"
-                         "msan_track_origins=0"
+                         "msan_track_origins=0:"
                          "allocator_may_return_null=1:"
-                         "symbolize=0:"
-                         "handle_segv=0:"
-                         "handle_sigbus=0:"
-                         "handle_abort=0:"
-                         "handle_sigfpe=0:"
-                         "handle_sigill=0", 0);
+                         "symbolize=0", 0);
 
   setenv("LSAN_OPTIONS",
          "exitcode=" STRINGIFY(LSAN_ERROR) ":"

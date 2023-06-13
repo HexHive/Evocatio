@@ -96,3 +96,4 @@ utils/persistent_mode/persistent_demo_new
 utils/persistent_mode/test-instr
 afl-symin
 afl-tmin-lazy
+cd-bytes-identifier

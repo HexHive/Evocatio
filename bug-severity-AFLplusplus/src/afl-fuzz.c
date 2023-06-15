@@ -1658,7 +1658,7 @@ int main(int argc, char **argv_orig, char **envp) {
     setenv(EVOCATIO_ENV_RESPATH, afl->fsrv.pCapResFilePath, 1);
   }
 #if EVOCATIO_PLZ_HELP_RESPATH
-  FILE *fp = fopen(afl->fsrv.pCapResFilePath, "w"); // use ANSI-C style, same as bug-severity-rt.o
+  FILE *fp = fopen(afl->fsrv.pCapResFilePath, "w"); // use ANSI-C style, same as bug-severity-rt-asan.o
   if (fp) {
     //it should indicate a safe virgin cap_res_file for both hash and text
     fprintf(fp, "CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP"EVOCATIO_IDENTIFIER"CAP");

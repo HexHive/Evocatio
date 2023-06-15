@@ -307,7 +307,7 @@ ifeq "$(TEST_MMAP)" "1"
         LDFLAGS += -Wno-deprecated-declarations
 endif
 
-PROGS_ALWAYS = ./afl-cc ./afl-compiler-rt.o ./afl-compiler-rt-32.o ./afl-compiler-rt-64.o ./bug-severity-rt.o ./bug-severity-rt-32.o ./bug-severity-rt-64.o
+PROGS_ALWAYS = ./afl-cc ./afl-compiler-rt.o ./afl-compiler-rt-32.o ./afl-compiler-rt-64.o ./bug-severity-rt-asan.o ./bug-severity-rt-asan-32.o ./bug-severity-rt-asan-64.o ./bug-severity-rt-ubsan.o ./bug-severity-rt-ubsan-32.o ./bug-severity-rt-ubsan-64.o
 PROGS        = $(PROGS_ALWAYS) ./afl-llvm-pass.so ./SanitizerCoveragePCGUARD.so ./split-compares-pass.so ./split-switches-pass.so ./cmplog-routines-pass.so ./cmplog-instructions-pass.so ./cmplog-switches-pass.so ./afl-llvm-dict2file.so ./compare-transform-pass.so ./afl-ld-lto ./afl-llvm-lto-instrumentlist.so ./afl-llvm-lto-instrumentation.so ./SanitizerCoverageLTO.so
 
 # If prerequisites are not given, warn, do not build anything, and exit with code 0
@@ -458,16 +458,27 @@ document:
 	@printf "[*] Building 64-bit variant of the runtime (-m64)... "
 	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; ln -sf afl-compiler-rt-64.o afl-llvm-rt-64.o; else echo "failed (that's fine)"; fi
 
-./bug-severity-rt.o: instrumentation/bug-severity-rt.o.c
+./bug-severity-rt-asan.o: instrumentation/bug-severity-rt-asan.o.c
 	$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -fPIC -c $< -o $@
 
-./bug-severity-rt-32.o: instrumentation/bug-severity-rt.o.c
+./bug-severity-rt-asan-32.o: instrumentation/bug-severity-rt-asan.o.c
 	@printf "[*] Building 32-bit variant of bug-severity runtime (-m32)... "
-	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m32 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt failed (that's fine)"; fi
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m32 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt-asan failed (that's fine)"; fi
 
-./bug-severity-rt-64.o: instrumentation/bug-severity-rt.o.c
+./bug-severity-rt-asan-64.o: instrumentation/bug-severity-rt-asan.o.c
 	@printf "[*] Building 64-bit variant of bug-severity runtime (-m64)... "
-	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt failed (that's fine)"; fi
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt-asan failed (that's fine)"; fi
+
+./bug-severity-rt-ubsan.o: instrumentation/bug-severity-rt-ubsan.o.c
+	$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -fPIC -c $< -o $@
+
+./bug-severity-rt-ubsan-32.o: instrumentation/bug-severity-rt-ubsan.o.c
+	@printf "[*] Building 32-bit variant of bug-severity runtime (-m32)... "
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m32 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt-ubsan failed (that's fine)"; fi
+
+./bug-severity-rt-ubsan-64.o: instrumentation/bug-severity-rt-ubsan.o.c
+	@printf "[*] Building 64-bit variant of bug-severity runtime (-m64)... "
+	@$(CC) $(CLANG_CFL) $(CFLAGS_SAFE) $(CPPFLAGS) -O3 -Wno-unused-result -m64 -fPIC -c $< -o $@ 2>/dev/null; if [ "$$?" = "0" ]; then echo "success!"; else echo "bug-severity-rt-ubsan failed (that's fine)"; fi
 
 .PHONY: test_build
 test_build: $(PROGS)
@@ -498,9 +509,12 @@ install: all
 	@if [ -f ./compare-transform-pass.so ]; then set -e; install -m 755 ./*.so $${DESTDIR}$(HELPER_PATH); fi
 	@if [ -f ./compare-transform-pass.so ]; then set -e; ln -sf afl-cc $${DESTDIR}$(BIN_PATH)/afl-clang-fast ; ln -sf ./afl-c++ $${DESTDIR}$(BIN_PATH)/afl-clang-fast++ ; ln -sf afl-cc $${DESTDIR}$(BIN_PATH)/afl-clang ; ln -sf ./afl-c++ $${DESTDIR}$(BIN_PATH)/afl-clang++ ; fi
 	@if [ -f ./SanitizerCoverageLTO.so ]; then set -e; ln -sf afl-cc $${DESTDIR}$(BIN_PATH)/afl-clang-lto ; ln -sf ./afl-c++ $${DESTDIR}$(BIN_PATH)/afl-clang-lto++ ; fi
-	@if [ -f ./bug-severity-rt.o    ]; then set -e; install -m 755 ./bug-severity-rt.o    $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt.o    $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-rt.o   ; fi 
-	@if [ -f ./bug-severity-rt-32.o ]; then set -e; install -m 755 ./bug-severity-rt-32.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-32.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-rt-32.o; fi
-	@if [ -f ./bug-severity-rt-64.o ]; then set -e; install -m 755 ./bug-severity-rt-64.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-64.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-rt-64.o; fi
+	@if [ -f ./bug-severity-rt-asan.o    ]; then set -e; install -m 755 ./bug-severity-rt-asan.o    $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-asan.o    $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-asan-rt.o   ; fi 
+	@if [ -f ./bug-severity-rt-asan-32.o ]; then set -e; install -m 755 ./bug-severity-rt-asan-32.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-asan-32.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-asan-rt-32.o; fi
+	@if [ -f ./bug-severity-rt-asan-64.o ]; then set -e; install -m 755 ./bug-severity-rt-asan-64.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-asan-64.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-asan-rt-64.o; fi
+	@if [ -f ./bug-severity-rt-ubsan.o    ]; then set -e; install -m 755 ./bug-severity-rt-ubsan.o    $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-ubsan.o    $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-ubsan-rt.o   ; fi 
+	@if [ -f ./bug-severity-rt-ubsan-32.o ]; then set -e; install -m 755 ./bug-severity-rt-ubsan-32.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-ubsan-32.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-ubsan-rt-32.o; fi
+	@if [ -f ./bug-severity-rt-ubsan-64.o ]; then set -e; install -m 755 ./bug-severity-rt-ubsan-64.o $${DESTDIR}$(HELPER_PATH); ln -sf bug-severity-rt-ubsan-64.o $${DESTDIR}$(HELPER_PATH)/bug-severity-llvm-ubsan-rt-64.o; fi
 	set -e; install -m 644 ./dynamic_list.txt $${DESTDIR}$(HELPER_PATH)
 	install -m 644 instrumentation/README.*.md $${DESTDIR}$(DOC_PATH)/
 

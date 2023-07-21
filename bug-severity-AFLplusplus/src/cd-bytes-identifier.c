@@ -1291,8 +1291,14 @@ bruteforce_all:
             /* Very special byte! It can affect the capability-related branch! */
             if (is_c_and_d_byte || is_c_d_non_byte) {
               continue;
-            } else if (is_non_crashing_byte && !is_c_d_non_byte) {
-              constraintsRes[i].func_lab += 4;  // C-D-non byte should be equal to 7!
+            } else if (is_c_non_byte && !is_c_d_non_byte ) {
+              constraintsRes[i].func_lab += 2;  // C-D-non byte should be equal to 7!
+              is_c_d_non_byte = 1;
+              break;
+            }
+              else if (is_d_non_byte && !is_c_d_non_byte) {
+              constraintsRes[i].func_lab += 1;  // C-D-non byte should be equal to 7!
+              is_c_d_non_byte = 1;
               break;
             } else if (is_c_byte && !is_c_and_d_byte) {
               constraintsRes[i].func_lab += 2;
